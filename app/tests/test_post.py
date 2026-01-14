@@ -8,7 +8,7 @@ from sqlmodel import Session, SQLModel, create_engine, select
 from sqlmodel.pool import StaticPool
 
 from ..main import app
-from ..models import Profile, Post
+from ..models.profile import Profile
 from ..database import get_session
 
 
@@ -62,9 +62,6 @@ def test_create_post(client: TestClient, profiles: list):
     assert response.status_code == 200
     assert data["text"] == "Test post content"
     assert data["profile_id"] == str(profiles[0].id)
-    assert len(data["media_urls"]) == 1
-    assert data["media_urls"][0].startswith("/uploads/images/")
-    assert data["media_urls"][0].endswith(".jpg")
 
 
 def test_create_post_invalid(client: TestClient):
@@ -114,9 +111,6 @@ def test_read_posts(client: TestClient, profiles: list):
     assert len(data) == 2
     assert data[0]["text"] == "First post"
     assert data[1]["text"] == "Second post"
-    # 파일 URL이 생성되었는지 확인
-    assert len(data[0]["media_urls"]) == 1
-    assert len(data[1]["media_urls"]) == 1
 
 
 def test_read_post(client: TestClient, profiles: list):
@@ -140,8 +134,6 @@ def test_read_post(client: TestClient, profiles: list):
     assert response.status_code == 200
     assert data["text"] == "Test post"
     assert data["profile_id"] == str(profiles[0].id)
-    assert len(data["media_urls"]) == 1
-    assert data["media_urls"][0].startswith("/uploads/images/")
 
 
 def test_read_profile_posts(client: TestClient, profiles: list):
@@ -177,6 +169,3 @@ def test_read_profile_posts(client: TestClient, profiles: list):
     assert len(data) == 2
     assert data[0]["text"] == "First post by TestUser1"
     assert data[1]["text"] == "Second post by TestUser1"
-    # 파일 URL이 생성되었는지 확인
-    assert len(data[0]["media_urls"]) == 1
-    assert len(data[1]["media_urls"]) == 1

@@ -3,7 +3,8 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel, create_engine, select
 from sqlmodel.pool import StaticPool
 from ..main import app
-from ..models import Profile, Chat, Message
+from ..models.profile import Profile, ProfileChatLink
+from ..models.chat import Chat, Message
 from ..database import get_session
 
 
@@ -68,7 +69,6 @@ def chat_with_profiles_fixture(session: Session, profiles: list):
     session.refresh(chat)
 
     # ProfileChatLink를 통해 프로필들과 채팅 연결
-    from ..models import ProfileChatLink
 
     link_1 = ProfileChatLink(profile_id=profiles[0].id, chat_id=chat.id)
     link_2 = ProfileChatLink(profile_id=profiles[1].id, chat_id=chat.id)

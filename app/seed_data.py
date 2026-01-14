@@ -1,6 +1,11 @@
 from sqlmodel import Session, select
-from app.models import Profile, Post, Chat, Message, ProfileChatLink
+import io
+from fastapi.testclient import TestClient
+from app.models.profile import Profile, ProfileChatLink
+from app.models.post import Post
+from app.models.chat import Chat, Message
 from app.database import engine, create_db_and_tables
+from app.main import app
 
 
 def create_profiles():
@@ -58,104 +63,65 @@ def create_posts():
     # 프로필 이름과 포스트 데이터 매핑
     posts_data = {
         "aria": [
-            {
-                "text": "오늘의 디자인 인사이트: 미니멀리즘의 진정한 의미는 단순함이 아닌 의도된 선택입니다.",
-                "media_urls": ["https://example.com/aria/post1.jpg"],
-            },
-            {
-                "text": "새로운 커피 레시피를 발견했어요! 에티오피아 원두로 만든 아이스 푸어 오버는 정말 특별하네요.",
-                "media_urls": ["https://example.com/aria/post2.jpg"],
-            },
-            {
-                "text": "디자인 시스템을 구축하면서 느낀 점: 일관성은 제품의 신뢰성을 높이는 핵심 요소입니다.",
-                "media_urls": ["https://example.com/aria/post3.jpg"],
-            },
+            "오늘의 디자인 인사이트: 미니멀리즘의 진정한 의미는 단순함이 아닌 의도된 선택입니다.",
+            "새로운 커피 레시피를 발견했어요! 에티오피아 원두로 만든 아이스 푸어 오버는 정말 특별하네요.",
+            "디자인 시스템을 구축하면서 느낀 점: 일관성은 제품의 신뢰성을 높이는 핵심 요소입니다.",
         ],
         "leos": [
-            {
-                "text": "새로운 인디 프로젝트를 시작했습니다. 작은 도구지만 일상에 큰 변화를 줄 수 있기를 기대해요.",
-                "media_urls": ["https://example.com/leos/post1.jpg"],
-            },
-            {
-                "text": "사용자 피드백을 반영한 제품 업데이트를 출시했습니다. 항상 귀 기울여 주셔서 감사합니다!",
-                "media_urls": ["https://example.com/leos/post2.jpg"],
-            },
+            "새로운 인디 프로젝트를 시작했습니다. 작은 도구지만 일상에 큰 변화를 줄 수 있기를 기대해요.",
+            "사용자 피드백을 반영한 제품 업데이트를 출시했습니다. 항상 귀 기울여 주셔서 감사합니다!",
         ],
         "lincoln": [
-            {
-                "text": "국가를 위한 헌신은 때로 개인의 희생을 요구하지만, 그 가치는 항상 존재합니다.",
-                "media_urls": ["https://example.com/lincoln/post1.jpg"],
-            },
-            {
-                "text": "노예제 폐지에 대한 내 생각: 모든 인간은 자유를 누릴 권리가 있습니다.",
-                "media_urls": ["https://example.com/lincoln/post2.jpg"],
-            },
-            {
-                "text": "민주주의의 미래: 국민의 목소리가 국가의 방향을 결정해야 합니다.",
-                "media_urls": ["https://example.com/lincoln/post3.jpg"],
-            },
-            {
-                "text": "전쟁과 평화: 우리는 항상 평화를 향한 대화의 길을 선택해야 합니다.",
-                "media_urls": ["https://example.com/lincoln/post4.jpg"],
-            },
-            {
-                "text": "교육의 중요성: 지식은 민주주의의 기반입니다.",
-                "media_urls": ["https://example.com/lincoln/post5.jpg"],
-            },
+            "국가를 위한 헌신은 때로 개인의 희생을 요구하지만, 그 가치는 항상 존재합니다.",
+            "노예제 폐지에 대한 내 생각: 모든 인간은 자유를 누릴 권리가 있습니다.",
+            "민주주의의 미래: 국민의 목소리가 국가의 방향을 결정해야 합니다.",
+            "전쟁과 평화: 우리는 항상 평화를 향한 대화의 길을 선택해야 합니다.",
+            "교육의 중요성: 지식은 민주주의의 기반입니다.",
         ],
         "newton": [
-            {
-                "text": "운동 법칙에 대한 새로운 통찰: 힘과 가속도의 관계는 우주의 근본 원리입니다.",
-                "media_urls": ["https://example.com/newton/post1.jpg"],
-            },
-            {
-                "text": "광학에 대한 연구: 빛의 성질을 이해하는 것은 자연 현상을 설명하는 열쇠입니다.",
-                "media_urls": ["https://example.com/newton/post2.jpg"],
-            },
-            {
-                "text": "미적분학의 발견: 수학은 자연을 설명하는 언어입니다.",
-                "media_urls": ["https://example.com/newton/post3.jpg"],
-            },
+            "운동 법칙에 대한 새로운 통찰: 힘과 가속도의 관계는 우주의 근본 원리입니다.",
+            "광학에 대한 연구: 빛의 성질을 이해하는 것은 자연 현상을 설명하는 열쇠입니다.",
+            "미적분학의 발견: 수학은 자연을 설명하는 언어입니다.",
         ],
         "sunsin": [
-            {
-                "text": "임진왜란에서의 전략: 해전의 승리는 국가 안보의 핵심입니다.",
-                "media_urls": ["https://example.com/sunsin/post1.jpg"],
-            },
-            {
-                "text": "거북선의 장점: 이 혁신적인 전함은 우리 해군의 자랑입니다.",
-                "media_urls": ["https://example.com/sunsin/post2.jpg"],
-            },
-            {
-                "text": "군인의 사명: 나라를 지키는 것은 우리의 신성한 의무입니다.",
-                "media_urls": ["https://example.com/sunsin/post3.jpg"],
-            },
-            {
-                "text": "전략의 중요성: 무력 충돌에서 승리하기 위해서는 지혜로운 전략이 필요합니다.",
-                "media_urls": ["https://example.com/sunsin/post4.jpg"],
-            },
+            "임진왜란에서의 전략: 해전의 승리는 국가 안보의 핵심입니다.",
+            "거북선의 장점: 이 혁신적인 전함은 우리 해군의 자랑입니다.",
+            "군인의 사명: 나라를 지키는 것은 우리의 신성한 의무입니다.",
+            "전략의 중요성: 무력 충돌에서 승리하기 위해서는 지혜로운 전략이 필요합니다.",
         ],
     }
+
+    # TestClient를 사용하여 실제 라우터 호출
+    client = TestClient(app)
 
     with Session(engine) as session:
         # 모든 프로필 가져오기
         profiles = session.exec(select(Profile)).all()
-
         # 프로필 이름으로 프로필 매핑
         profile_map = {profile.name: profile for profile in profiles}
 
-        # 각 프로필에 대한 포스트 생성
-        for profile_name, profile_posts in posts_data.items():
-            if profile_name in profile_map:
-                profile = profile_map[profile_name]
-                for post_data in profile_posts:
-                    post = Post(
-                        text=post_data["text"],
-                        media_urls=post_data["media_urls"],
-                        profile_id=profile.id,
+    # 각 프로필에 대한 포스트 생성
+    for profile_name, profile_posts in posts_data.items():
+        if profile_name in profile_map:
+            profile = profile_map[profile_name]
+            for post_text in profile_posts:
+                # 가짜 이미지 파일 생성
+                fake_image = io.BytesIO(b"sample image data for seed data")
+                fake_image.name = f"{profile_name}_post.jpg"
+                fake_image.content_type = "image/jpeg"
+
+                # 실제 라우터를 통해 포스트 생성
+                response = client.post(
+                    "/posts/",
+                    data={"text": post_text, "profile_id": str(profile.id)},
+                    files=[("files", fake_image)],
+                )
+
+                if response.status_code != 200:
+                    print(
+                        f"Failed to create post for {profile_name}: {response.status_code}"
                     )
-                    session.add(post)
-        session.commit()
+                    print(response.text)
 
 
 def create_chats():

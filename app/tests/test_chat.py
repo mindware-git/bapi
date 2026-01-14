@@ -3,7 +3,8 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session, SQLModel, create_engine, select
 from sqlmodel.pool import StaticPool
 from ..main import app
-from ..models import Profile, Chat, ProfileChatLink
+from ..models.profile import Profile, ProfileChatLink
+from ..models.chat import Chat
 from ..database import get_session
 
 

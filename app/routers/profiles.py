@@ -1,11 +1,13 @@
 from fastapi import Depends, APIRouter, HTTPException, Query
 from sqlmodel import Session, select
 from uuid import UUID
-from ..models import (
+from ..models.profile import (
     Profile,
     ProfilePublic,
     ProfileCreate,
     ProfileUpdate,
+)
+from ..models.post import (
     Post,
     PostPublic,
 )

@@ -5,21 +5,25 @@ import os
 import uuid as uuid_lib
 from typing import List
 
-from ..models import (
+from ..models.profile import (
     Profile,
     ProfilePublic,
     ProfileCreate,
     ProfileUpdate,
+    ProfileChatLink,
+)
+from ..models.post import (
     Post,
     PostPublic,
     PostCreate,
+)
+from ..models.chat import (
     Chat,
     ChatPublic,
     ChatCreate,
     Message,
     MessagePublic,
     MessageCreate,
-    ProfileChatLink,
 )
 from ..database import get_session
 
