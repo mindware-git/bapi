@@ -26,4 +26,5 @@ app.include_router(posts_router)
 app.include_router(comments_router)
 
 # Mount static files
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
