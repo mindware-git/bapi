@@ -1,9 +1,16 @@
-from fastapi import Depends, APIRouter, HTTPException, Query, File, UploadFile, Form
+from fastapi import (
+    Depends,
+    APIRouter,
+    HTTPException,
+    Query,
+    WebSocket,
+    WebSocketDisconnect,
+)
 from sqlmodel import Session, select
 from uuid import UUID
 import os
 import uuid as uuid_lib
-from typing import List
+from typing import List, Dict
 
 from ..models.profile import (
     Profile,
@@ -25,7 +32,7 @@ from ..models.chat import (
     MessagePublic,
     MessageCreate,
 )
-from ..database import get_session
+from ..database import get_session, engine
 
 
 router = APIRouter()
@@ -93,10 +100,7 @@ def create_message(*, session: Session = Depends(get_session), message: MessageC
             status_code=404, detail=f"Chat with id {message.chat_id} not found"
         )
 
-    # Validate that the profile_id exists (if provided)
-    # For now, we'll assume profile_id is part of the message or associated with the chat
     # In a real implementation, you might want to validate the profile as well
-
     db_message = Message.model_validate(message)
     session.add(db_message)
     session.commit()
@@ -124,3 +128,70 @@ def read_chat_messages(*, session: Session = Depends(get_session), chat_id: UUID
     # Get messages for this chat
     messages = session.exec(select(Message).where(Message.chat_id == chat_id)).all()
     return messages
+
+
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: Dict[UUID, List[WebSocket]] = {}
+
+    async def connect(self, websocket: WebSocket, chat_id: UUID):
+        await websocket.accept()
+        if chat_id not in self.active_connections:
+            self.active_connections[chat_id] = []
+        self.active_connections[chat_id].append(websocket)
+
+    def disconnect(self, websocket: WebSocket, chat_id: UUID):
+        if (
+            chat_id in self.active_connections
+            and websocket in self.active_connections[chat_id]
+        ):
+            self.active_connections[chat_id].remove(websocket)
+            if not self.active_connections[chat_id]:
+                del self.active_connections[chat_id]
+
+    async def broadcast(self, message: str, chat_id: UUID):
+        if chat_id in self.active_connections:
+            connections = self.active_connections[chat_id]
+            for connection in connections:
+                await connection.send_text(message)
+
+
+manager = ConnectionManager()
+
+
+@router.websocket("/ws/{chat_id}")
+async def websocket_endpoint(websocket: WebSocket, chat_id: UUID):
+    await manager.connect(websocket, chat_id)
+    try:
+        while True:
+            data = await websocket.receive_json()
+            # Expected: {"profile_id": "...", "text": "...", "media_file_ids": []}
+            with Session(engine) as session:
+                profile_id_str = data.get("profile_id")
+                if not profile_id_str:
+                    continue  # Ignore malformed data
+
+                # TODO: Add validation that profile exists and is in this chat
+
+                db_message = Message(
+                    text=data.get("text", ""),
+                    chat_id=chat_id,
+                    profile_id=UUID(profile_id_str),
+                    media_file_ids=data.get("media_file_ids", []),
+                )
+                session.add(db_message)
+                session.commit()
+                session.refresh(db_message)
+
+                message_to_broadcast = MessagePublic.model_validate(db_message)
+
+            await manager.broadcast(
+                message_to_broadcast.model_dump_json(), chat_id=chat_id
+            )
+
+    except WebSocketDisconnect:
+        manager.disconnect(websocket, chat_id)
+        await manager.broadcast(f"A client has left the chat", chat_id=chat_id)
+    except Exception as e:
+        print(f"Error in websocket: {e}")
+        manager.disconnect(websocket, chat_id)
