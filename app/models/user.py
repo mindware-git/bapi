@@ -15,7 +15,7 @@ class UserBase(SQLModel):
 
 class User(UserBase, table=True):
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    profile_id: uuid.UUID | None = Field(foreign_key="profile.id", unique=True)
+    profile_id: uuid.UUID = Field(foreign_key="profile.id", unique=True)
     oauth_accounts: list["OAuthAccount"] = Relationship(back_populates="user")
     refresh_tokens: list["RefreshToken"] = Relationship(back_populates="user")
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -24,14 +24,14 @@ class User(UserBase, table=True):
 
 class UserCreate(SQLModel):
     email: str
-    profile_id: uuid.UUID | None = None
+    profile_id: uuid.UUID
 
 
 class UserPublic(SQLModel):
     id: uuid.UUID
     email: str
     is_active: bool
-    profile: "ProfilePublic" | None = None
+    profile: "ProfilePublic"
 
 
 class UserUpdate(SQLModel):
