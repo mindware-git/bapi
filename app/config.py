@@ -5,12 +5,12 @@ class Settings(BaseSettings):
     """애플리케이션 설정"""
 
     # OAuth 설정
-    google_client_id: str
-    google_client_secret: str
+    google_client_id: str = "dummy"
+    google_client_secret: str = "dummy"
     google_redirect_uri: str = "http://localhost:3000/auth/callback/google"
 
     # JWT 설정
-    jwt_secret_key: str
+    jwt_secret_key: str = "dummy"
     jwt_algorithm: str = "HS256"
     jwt_expire_hours: int = 24
 

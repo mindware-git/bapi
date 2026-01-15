@@ -20,3 +20,24 @@ The backend is a [FastAPI](https://fastapi.tiangolo.com/) application.
 
 ### Testing
 - **Run tests:** `uv run pytest`
+
+### Deploy
+```
+sudo nano /etc/nginx/sites-available/bapi
+
+server {
+    listen 80;
+    server_name bapi.mindware.kr;
+
+    location / {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+}
+
+sudo ln -s /etc/nginx/sites-available/bapi /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl reload nginx
+```
