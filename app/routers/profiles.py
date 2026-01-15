@@ -19,6 +19,10 @@ router = APIRouter()
 
 @router.post("/profiles/", response_model=ProfilePublic)
 def create_profile(*, session: Session = Depends(get_session), profile: ProfileCreate):
+    # Set default avatar if not provided
+    if not profile.avatar:
+        profile.avatar = "/static/images/originals/default_avatar.png"
+
     db_profile = Profile.model_validate(profile)
     session.add(db_profile)
     session.commit()

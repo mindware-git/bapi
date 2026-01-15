@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from app.models.profile import Profile
+    from app.models.comment import Comment
 
 
 class PostBase(SQLModel):
@@ -28,3 +29,4 @@ class PostCreate(PostBase):
 class PostPublic(PostBase):
     id: uuid.UUID
     profile_id: uuid.UUID
+    media_urls: list[str] = []

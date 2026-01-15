@@ -35,8 +35,13 @@ class Profile(ProfileBase, table=True):
     comments: list["Comment"] = Relationship(back_populates="profile")
 
 
-class ProfileCreate(ProfileBase):
-    pass
+class ProfileCreate(SQLModel):
+    name: str = Field(unique=True)
+    bio: str | None = None
+    avatar: str | None = None
+    posts_count: int = 0
+    followers_count: int = 0
+    following_count: int = 0
 
 
 class ProfilePublic(ProfileBase):

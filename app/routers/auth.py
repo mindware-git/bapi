@@ -4,17 +4,14 @@ from typing import Annotated
 import uuid
 import requests
 from datetime import datetime, timezone, timedelta
+import jwt
 
 from app.database import get_session
 from app.models.user import User, OAuthAccount
 from app.models.auth import UserInfo
+from app.config import settings
 
 router = APIRouter(prefix="/auth", tags=["auth"])
-
-# TODO: 실제 구현 시에는 환경 변수에서 가져오기
-GOOGLE_CLIENT_ID = "your-google-client-id"
-GOOGLE_CLIENT_SECRET = "your-google-client-secret"
-GOOGLE_REDIRECT_URI = "http://localhost:3000/auth/callback"
 
 
 def get_user_infos_from_google_token(code: str) -> dict:
@@ -25,9 +22,9 @@ def get_user_infos_from_google_token(code: str) -> dict:
             "https://oauth2.googleapis.com/token",
             data={
                 "code": code,
-                "client_id": GOOGLE_CLIENT_ID,
-                "client_secret": GOOGLE_CLIENT_SECRET,
-                "redirect_uri": GOOGLE_REDIRECT_URI,
+                "client_id": settings.google_client_id,
+                "client_secret": settings.google_client_secret,
+                "redirect_uri": settings.google_redirect_uri,
                 "grant_type": "authorization_code",
             },
         )
@@ -63,7 +60,7 @@ def get_user_infos_from_google_token(code: str) -> dict:
         return {"status": False, "user_infos": None, "error": str(e)}
 
 
-@router.post("/google/callback")
+@router.post("/callback/google")
 async def google_callback(
     code: str, session: Annotated[Session, Depends(get_session)]
 ) -> dict:
