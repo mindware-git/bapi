@@ -17,9 +17,7 @@ class Post(PostBase, table=True):
     profile_id: uuid.UUID = Field(foreign_key="profile.id")
     profile: "Profile" = Relationship(back_populates="posts")
     comments: list["Comment"] = Relationship(back_populates="post")
-    media_file_ids: list[uuid.UUID] = Field(
-        default_factory=list, sa_column=Column(JSON)
-    )
+    media_file_ids: list[str] = Field(default_factory=list, sa_column=Column(JSON))
 
 
 class PostCreate(PostBase):

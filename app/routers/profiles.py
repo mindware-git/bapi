@@ -12,6 +12,7 @@ from ..models.post import (
     PostPublic,
 )
 from ..database import get_session
+from ..routers.posts import post_to_post_public
 
 
 router = APIRouter()
@@ -82,20 +83,9 @@ def delete_profile(*, session: Session = Depends(get_session), profile_id: UUID)
     return {"ok": True}
 
 
-@router.get("/posts/", response_model=list[PostPublic])
-def read_posts(
-    *,
-    session: Session = Depends(get_session),
-    offset: int = 0,
-    limit: int = Query(default=100, le=100),
-):
-    posts = session.exec(select(Post).offset(offset).limit(limit)).all()
-    return posts
-
-
 @router.get("/profiles/{profile_id}/posts/", response_model=list[PostPublic])
 def read_profile_posts(*, session: Session = Depends(get_session), profile_id: UUID):
     profile: Profile = session.get(Profile, profile_id)
     if not profile:
         raise HTTPException(status_code=404, detail="Profile not found")
-    return profile.posts
+    return [post_to_post_public(post, session) for post in profile.posts]

@@ -41,9 +41,9 @@ router = APIRouter()
 def create_post(
     *,
     session: Session = Depends(get_session),
-    text: str = Form(...),
+    text: str | None = Form(None),
     profile_id: str = Form(...),
-    files: List[UploadFile] = File(default=[]),
+    files: List[UploadFile] = File(...),
 ):
     # Validate that the profile exists
     try:
