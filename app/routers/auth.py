@@ -1,14 +1,11 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from sqlmodel import Session, select
 from typing import Annotated
-import uuid
 import requests
 from datetime import datetime, timezone, timedelta
-import jwt
-
 from app.database import get_session
 from app.models.user import User, OAuthAccount
-from app.models.auth import UserInfo
+from app.models.profile import Profile
 from app.config import settings
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -98,8 +95,7 @@ async def google_callback(
             oauth_account.expires_at = datetime.now(timezone.utc) + timedelta(
                 seconds=token_data.get("expires_in", 3600)
             )
-        else:
-            # 신규 사용자
+        else:  # OAuth 계정이 없는 경우 (신규 사용자 또는 기존 사용자에 OAuth 연결)
             # 이메일로 기존 사용자 확인
             existing_user = session.exec(
                 select(User).where(User.email == google_user_info["email"])
@@ -109,11 +105,9 @@ async def google_callback(
                 user = existing_user
                 message = "Existing user linked with Google account"
             else:
-                # 새 사용자 생성
-                user = User(email=google_user_info["email"])
+                profile = Profile(name=google_user_info["email"])
+                user = User(email=google_user_info["email"], profile_id=profile.id)
                 session.add(user)
-                session.commit()
-                session.refresh(user)
                 message = "New user created successfully"
 
             # OAuth 계정 연결
