@@ -1,0 +1,44 @@
+character_id = "dogwithjob"
+
+[appearance]
+species = "dog"
+breed_ambiguity = "medium"
+overall_build = "medium"
+posture = "upright_sitting"
+
+[fur]
+length = "short_to_medium"
+texture = "natural"
+primary_color = "light_brown"
+secondary_color = "white"
+pattern = "subtle"
+
+[face]
+eye_color = "dark_brown"
+eye_expression = "focused"
+ear_shape = "semi_erect"
+muzzle_length = "medium"
+default_expression = "calm_serious"
+
+[body]
+size = "medium"
+legs = "proportional"
+tail = "relaxed"
+
+[style_constraints]
+photo_realistic = true
+cartoon = false
+illustration = false
+exaggeration = false
+human_clothing = false
+
+[camera_preferences]
+framing = "centered"
+distance = "medium"
+angle = "eye_level"
+lighting = "natural"
+
+[consistency_rules]
+always_same_dog = true
+no_breed_switching = true
+no_color_shift = true
