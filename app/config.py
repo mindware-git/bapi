@@ -5,7 +5,9 @@ class Settings(BaseSettings):
     """애플리케이션 설정"""
 
     # OAuth 설정
-    google_client_id: str = "dummy"
+    google_client_id: str = (
+        "440239414638-ni2tcv142f07jm44rcht4fbstufe392g.apps.googleusercontent.com"
+    )
     google_client_secret: str = "dummy"
     google_redirect_uri: str = "http://localhost:3000/auth/callback/google"
 

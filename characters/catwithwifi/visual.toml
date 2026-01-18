@@ -1,0 +1,33 @@
+[identity]
+species = "cat"
+breed_style = "tabby"
+
+[fur]
+pattern = "classic_tabby"
+primary_color = "brown"
+secondary_color = "black"
+chest = "white"
+paws = "white"
+
+[eyes]
+color = "greenish_yellow"
+expression = "neutral_judgment"
+
+[face]
+symmetry = "high"
+muzzle = "white"
+marking_forehead = "M"
+
+[body]
+size = "medium"
+posture = "calm_upright"
+
+[tail]
+pattern = "ringed"
+tip_color = "dark"
+
+[image_rules]
+photorealistic = true
+no_stylization = true
+no_exaggeration = true
+natural_lighting = true
