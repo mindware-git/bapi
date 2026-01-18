@@ -1,0 +1,24 @@
+post_id = "1"
+character_id = "catwithwifi"
+
+[type]
+format = "post"
+platform = "instagram"
+
+[mood]
+primary = "calm"
+secondary = "confident"
+
+[context]
+indoors = true
+outdoors = false
+time_of_day = "day"
+activity_level = "still"
+
+[content_rules]
+minimum_images = 1
+text_optional = true
+
+[notes]
+purpose = "first_presence"
+description = "First appearance. No introduction. Just existence."
