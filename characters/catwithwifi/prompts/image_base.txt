@@ -1,0 +1,26 @@
+Photo-realistic photograph only.
+
+Looks like a real photo taken by a human with a real camera.
+Natural lighting only.
+Realistic exposure and depth of field.
+No dramatic lighting.
+No studio look.
+
+No stylization.
+No artistic filters.
+No cinematic color grading.
+No exaggerated expressions or poses.
+
+No text.
+No captions.
+No overlays.
+No watermarks.
+No UI elements.
+No borders.
+
+No illustration.
+No cartoon.
+No anime.
+No 3D render.
+
+The image should feel accidental, casual, and unplanned.
