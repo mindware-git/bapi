@@ -4,6 +4,7 @@ from sqlmodel import Session, SQLModel, create_engine, select
 from sqlmodel.pool import StaticPool
 import io
 import os
+import shutil
 from PIL import Image
 
 from app.main import app
@@ -63,7 +64,7 @@ def test_update_profile_avatar(client: TestClient, session: Session):
     assert response_data["id"] == str(profile.id)
     assert response_data["avatar"] is not None
     assert response_data["avatar"] != "/static/images/originals/default_avatar.png"
-    assert response_data["avatar"].startswith("/static/images/originals/")
+    assert response_data["avatar"].startswith("/uploads/")
 
     # 4. Assert: Check the database state
     session.refresh(profile)
@@ -79,12 +80,16 @@ def test_update_profile_avatar(client: TestClient, session: Session):
     assert media.content_type == "image/png"
 
     # 5. Assert: Check if files were created and then cleanup
-    original_filepath = f"app{media.original_url}"
-    thumbnail_filepath = f"app{media.thumbnail_url}"
+    # media.original_url is like /uploads/<uuid>/<filename.png>
+    # The path on disk is relative to the project root, so we remove the leading '/'
+    upload_subdir = os.path.dirname(media.original_url.lstrip("/"))
+    assert os.path.isdir(upload_subdir)
+
+    original_filepath = media.original_url.lstrip("/")
+    thumbnail_filepath = media.thumbnail_url.lstrip("/")
 
     assert os.path.exists(original_filepath)
     assert os.path.exists(thumbnail_filepath)
 
-    # Cleanup created files
-    os.remove(original_filepath)
-    os.remove(thumbnail_filepath)
+    # Cleanup created directory and its contents
+    shutil.rmtree(upload_subdir)

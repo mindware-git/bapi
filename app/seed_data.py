@@ -48,7 +48,11 @@ def internal_signup(name: str, session: Session) -> Profile:
         if profile:
             return profile
 
-    profile = Profile(name=name, bio=f"AI character {name}")
+    profile = Profile(
+        name=name,
+        bio=f"AI character {name}",
+        avatar="/static/images/originals/default_avatar.png",
+    )
     session.add(profile)
     session.commit()
     session.refresh(profile)
@@ -73,33 +77,26 @@ def attach_avatar_to_profile(client: TestClient, profile: Profile, session: Sess
         return
 
     character_avatar_path = CHARACTERS_DIR / profile.name / "images" / "profile.png"
-    avatar_path = (
-        character_avatar_path if character_avatar_path.exists() else DEFAULT_AVATAR_PATH
-    )
 
-    # 기본 아바타를 사용해야 하는데 이미 기본 아바타로 설정된 경우, 아무것도 하지 않음
-    if (
-        avatar_path == DEFAULT_AVATAR_PATH
-        and profile.avatar == "/static/images/originals/default_avatar.png"
-    ):
+    # 캐릭터 아바타가 없으면 아무 작업도 하지 않음 (기본 아바타는 internal_signup에서 설정됨)
+    if not character_avatar_path.exists():
         return
 
-    if avatar_path.exists():
-        with open(avatar_path, "rb") as f:
-            response = client.patch(
-                f"/profiles/{profile.id}/avatar",
-                files={"file": (avatar_path.name, f, "image/png")},
-            )
+    with open(character_avatar_path, "rb") as f:
+        response = client.patch(
+            f"/profiles/{profile.id}/avatar",
+            files={"file": (character_avatar_path.name, f, "image/png")},
+        )
 
-        if response.status_code == 200:
-            print(
-                f"[seed][api] avatar attached for {profile.name}: {response.json()['avatar']}"
-            )
-        else:
-            print(
-                f"[seed][api] failed to attach avatar for {profile.name}. "
-                f"Status: {response.status_code}, Detail: {response.text}"
-            )
+    if response.status_code == 200:
+        print(
+            f"[seed][api] avatar attached for {profile.name}: {response.json()['avatar']}"
+        )
+    else:
+        print(
+            f"[seed][api] failed to attach avatar for {profile.name}. "
+            f"Status: {response.status_code}, Detail: {response.text}"
+        )
 
 
 def seed_posts_via_api(

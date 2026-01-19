@@ -108,7 +108,10 @@ async def google_callback(
             else:
                 # Create a profile for the new user
                 profile_name = f"u{uuid.uuid4().hex[:15]}"
-                profile = Profile(name=profile_name)
+                profile = Profile(
+                    name=profile_name,
+                    avatar="/static/images/originals/default_avatar.png",
+                )
                 session.add(profile)
                 session.flush()  # Flush to get the profile.id without committing
 

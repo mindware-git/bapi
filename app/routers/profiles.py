@@ -118,14 +118,14 @@ async def update_profile_avatar(
     original_filename = f"{unique_id}{file_extension}"
     thumbnail_filename = f"{unique_id}.jpg"  # Thumbnails are converted to JPEG
 
-    original_dir = "app/static/images/originals"
-    thumbnail_dir = "app/static/images/thumbnails"
+    upload_dir = "uploads"
+    media_dir_name = str(unique_id)
+    media_dir = os.path.join(upload_dir, media_dir_name)
 
-    os.makedirs(original_dir, exist_ok=True)
-    os.makedirs(thumbnail_dir, exist_ok=True)
+    os.makedirs(media_dir, exist_ok=True)
 
-    original_filepath = os.path.join(original_dir, original_filename)
-    thumbnail_filepath = os.path.join(thumbnail_dir, thumbnail_filename)
+    original_filepath = os.path.join(media_dir, original_filename)
+    thumbnail_filepath = os.path.join(media_dir, thumbnail_filename)
 
     with open(original_filepath, "wb") as f:
         f.write(contents)
@@ -136,8 +136,8 @@ async def update_profile_avatar(
 
     # --- 3. Create Media record ---
     # Convert filepaths to URL paths for DB storage
-    original_url = f"/static/images/originals/{original_filename}"
-    thumbnail_url = f"/static/images/thumbnails/{thumbnail_filename}"
+    original_url = f"/{upload_dir}/{media_dir_name}/{original_filename}"
+    thumbnail_url = f"/{upload_dir}/{media_dir_name}/{thumbnail_filename}"
 
     media_data = MediaCreate(
         original_url=original_url,
