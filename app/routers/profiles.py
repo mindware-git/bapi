@@ -1,6 +1,8 @@
-from fastapi import Depends, APIRouter, HTTPException, Query
+from fastapi import Depends, APIRouter, HTTPException, Query, UploadFile, File
 from sqlmodel import Session, select
 from uuid import UUID
+import os
+import uuid
 from ..models.profile import (
     Profile,
     ProfilePublic,
@@ -11,8 +13,10 @@ from ..models.post import (
     Post,
     PostPublic,
 )
+from ..models.media import Media, MediaCreate
 from ..database import get_session
 from ..routers.posts import post_to_post_public
+from ..utils import media_utils
 
 
 router = APIRouter()
@@ -89,3 +93,73 @@ def read_profile_posts(*, session: Session = Depends(get_session), profile_id: U
     if not profile:
         raise HTTPException(status_code=404, detail="Profile not found")
     return [post_to_post_public(post, session) for post in profile.posts]
+
+
+@router.patch("/profiles/{profile_id}/avatar", response_model=ProfilePublic)
+async def update_profile_avatar(
+    *,
+    session: Session = Depends(get_session),
+    profile_id: UUID,
+    file: UploadFile = File(...),
+):
+    """
+    Update a profile's avatar image.
+    """
+    db_profile = session.get(Profile, profile_id)
+    if not db_profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+
+    # --- 1. Save the uploaded file ---
+    contents = await file.read()
+    file_size = len(contents)
+    file_extension = os.path.splitext(file.filename)[1]
+    unique_id = uuid.uuid4()
+
+    original_filename = f"{unique_id}{file_extension}"
+    thumbnail_filename = f"{unique_id}.jpg"  # Thumbnails are converted to JPEG
+
+    original_dir = "app/static/images/originals"
+    thumbnail_dir = "app/static/images/thumbnails"
+
+    os.makedirs(original_dir, exist_ok=True)
+    os.makedirs(thumbnail_dir, exist_ok=True)
+
+    original_filepath = os.path.join(original_dir, original_filename)
+    thumbnail_filepath = os.path.join(thumbnail_dir, thumbnail_filename)
+
+    with open(original_filepath, "wb") as f:
+        f.write(contents)
+
+    # --- 2. Process the image (create thumbnail, get dimensions) ---
+    media_utils.create_thumbnail(original_filepath, thumbnail_filepath)
+    width, height = media_utils.get_image_dimensions(original_filepath)
+
+    # --- 3. Create Media record ---
+    # Convert filepaths to URL paths for DB storage
+    original_url = f"/static/images/originals/{original_filename}"
+    thumbnail_url = f"/static/images/thumbnails/{thumbnail_filename}"
+
+    media_data = MediaCreate(
+        original_url=original_url,
+        thumbnail_url=thumbnail_url,
+        media_type="image",
+        file_size=file_size,
+        width=width,
+        height=height,
+        filename=file.filename,  # Original uploaded filename
+        content_type=file.content_type,
+        object_type="profile_avatar",
+        object_id=profile_id,
+    )
+
+    db_media = Media.model_validate(media_data)
+    session.add(db_media)
+
+    # --- 4. Update Profile's avatar URL ---
+    db_profile.avatar = original_url
+    session.add(db_profile)
+
+    session.commit()
+    session.refresh(db_profile)
+
+    return db_profile
