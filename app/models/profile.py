@@ -16,7 +16,12 @@ class ProfileChatLink(SQLModel, table=True):
 
 
 class ProfileBase(SQLModel):
-    name: str = Field(unique=True)
+    name: str = Field(
+        unique=True,
+        min_length=4,
+        max_length=16,
+        regex=r"^(?=.*[a-zA-Z0-9]$)[a-zA-Z][a-zA-Z0-9_-]*$",
+    )
     bio: str | None = None
     avatar: str | None = None
     posts_count: int = 0
@@ -36,7 +41,12 @@ class Profile(ProfileBase, table=True):
 
 
 class ProfileCreate(SQLModel):
-    name: str = Field(unique=True)
+    name: str = Field(
+        unique=True,
+        min_length=4,
+        max_length=16,
+        regex=r"^(?=.*[a-zA-Z0-9]$)[a-zA-Z][a-zA-Z0-9_-]*$",
+    )
     bio: str | None = None
     avatar: str | None = None
     posts_count: int = 0

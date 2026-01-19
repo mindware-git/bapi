@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from sqlmodel import Session, select
 from typing import Annotated
+import uuid
 import requests
 from datetime import datetime, timezone, timedelta
 from app.database import get_session
@@ -105,7 +106,13 @@ async def google_callback(
                 user = existing_user
                 message = "Existing user linked with Google account"
             else:
-                profile = Profile(name=google_user_info["email"])
+                # Create a profile for the new user
+                profile_name = f"u{uuid.uuid4().hex[:15]}"
+                profile = Profile(name=profile_name)
+                session.add(profile)
+                session.flush()  # Flush to get the profile.id without committing
+
+                # Create the new user and link it to the profile
                 user = User(email=google_user_info["email"], profile_id=profile.id)
                 session.add(user)
                 message = "New user created successfully"

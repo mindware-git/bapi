@@ -66,17 +66,24 @@ def test_google_callback_new_user(
 
     # 4. Assert: Check the database state
     # Verify User creation
-    users = session.exec(select(User)).all()
-    assert len(users) == 1
-    created_user = users[0]
-    assert created_user.email == user_email
+    created_user = session.exec(select(User).where(User.email == user_email)).one()
+    assert created_user is not None
+
+    # Verify Profile creation and linking
+    created_profile = session.exec(
+        select(Profile).where(Profile.id == created_user.profile_id)
+    ).one()
+    assert created_profile is not None
+    assert created_profile.name != user_email
+    assert len(created_profile.name) == 16
+    assert created_profile.name.startswith("u")
 
     # Verify OAuthAccount creation and linking
-    oauth_accounts = session.exec(select(OAuthAccount)).all()
-    assert len(oauth_accounts) == 1
-    created_oauth = oauth_accounts[0]
+    created_oauth = session.exec(
+        select(OAuthAccount).where(OAuthAccount.user_id == created_user.id)
+    ).one()
+    assert created_oauth is not None
     assert created_oauth.provider_user_id == google_user_id
-    assert created_oauth.user_id == created_user.id
     assert created_oauth.access_token == "fake_access_token"
 
 
@@ -90,7 +97,7 @@ def test_google_callback_existing_user_new_oauth(
     """
     # 1. Arrange: Create an existing user and a linked profile in the database
     existing_user_email = "existing.user@example.com"
-    existing_profile = Profile(name=existing_user_email)
+    existing_profile = Profile(name="existinguser")
     session.add(existing_profile)
     session.flush()  # Get profile.id
     existing_user = User(email=existing_user_email, profile_id=existing_profile.id)
@@ -140,7 +147,7 @@ def test_google_callback_returning_oauth_user(
     """
     # 1. Arrange: Create a user and a linked profile, then a linked OAuth account
     user_email = "returning.user@example.com"
-    profile = Profile(name=user_email)
+    profile = Profile(name="returninguser")
     session.add(profile)
     session.flush()  # Get profile.id
     user = User(email=user_email, profile_id=profile.id)
