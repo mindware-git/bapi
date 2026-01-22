@@ -27,7 +27,9 @@ def post_to_post_public(post: Post, session: Session) -> PostPublic:
         media_records = session.exec(
             select(Media).where(Media.id.in_(media_uuids))
         ).all()
-        media_urls = [media.original_url for media in media_records]
+        media_urls = [
+            media.thumbnail_url for media in media_records if media.thumbnail_url
+        ]
 
     return PostPublic(
         id=post.id, profile_id=post.profile_id, text=post.text, media_urls=media_urls

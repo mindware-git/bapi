@@ -1,0 +1,531 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chat Test</title>
+    <script src="https://unpkg.com/htmx.org"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      .message-own {
+        background: #3b82f6;
+        color: white;
+        margin-left: auto;
+      }
+      .message-other {
+        background: #f3f4f6;
+        color: #1f2937;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-100 min-h-screen p-4">
+    <div class="max-w-4xl mx-auto">
+      <h1 class="text-2xl font-bold mb-4">🗨️ Real-time Chat Test</h1>
+
+      <!-- Chat room and user selection -->
+      <div class="bg-white rounded-lg shadow p-4 mb-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+          <div>
+            <label class="block text-sm font-medium mb-1">Chat Room</label>
+            <select id="chatSelect" class="w-full border rounded px-3 py-2">
+              <option value="">Select chat room...</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1">User</label>
+            <select id="profileSelect" class="w-full border rounded px-3 py-2">
+              <option value="">Select user...</option>
+            </select>
+          </div>
+          <div class="flex items-end">
+            <button
+              id="connectBtn"
+              class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+            >
+              Connect
+            </button>
+          </div>
+        </div>
+
+        <!-- Status information -->
+        <div id="statusInfo" class="text-sm text-gray-600">
+          <span id="connectionStatus">🔴 Not Connected</span> |
+          <span id="currentInfo"
+            >Chat Room: Not Selected | User: Not Selected</span
+          >
+        </div>
+      </div>
+
+      <!-- Chat area -->
+      <div id="chatArea" class="hidden">
+        <div class="bg-white rounded-lg shadow">
+          <!-- Message area -->
+          <div id="messages" class="h-96 overflow-y-auto p-4 border-b">
+            <div class="text-center text-gray-500">
+              Messages will appear when you connect to a chat room.
+            </div>
+          </div>
+
+          <!-- Message input -->
+          <div class="p-4">
+            <!-- Image preview area -->
+            <div id="imagePreview" class="hidden mb-3">
+              <div class="text-sm text-gray-600 mb-2">Selected images:</div>
+              <div
+                id="imagePreviewContainer"
+                class="flex gap-2 flex-wrap"
+              ></div>
+            </div>
+
+            <form id="messageForm" class="flex gap-2">
+              <input
+                type="file"
+                id="imageInput"
+                accept="image/*"
+                multiple
+                class="hidden"
+                disabled
+              />
+
+              <button
+                type="button"
+                id="imageBtn"
+                class="bg-gray-500 text-white px-3 py-2 rounded hover:bg-gray-600 disabled:bg-gray-300"
+                disabled
+              >
+                📷
+              </button>
+
+              <input
+                type="text"
+                id="messageInput"
+                placeholder="Type your message..."
+                class="flex-1 border rounded px-3 py-2"
+                disabled
+              />
+              <button
+                type="submit"
+                id="sendBtn"
+                class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:bg-gray-300"
+                disabled
+              >
+                Send
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Test instructions -->
+      <div class="bg-blue-50 rounded-lg p-4 mt-4">
+        <h3 class="font-semibold mb-2">🧪 Test Instructions</h3>
+        <ol class="text-sm text-gray-700 list-decimal list-inside space-y-1">
+          <li>Select a chat room and user</li>
+          <li>Click the 'Connect' button</li>
+          <li>Open a new tab and navigate to the same page</li>
+          <li>Select a different user and connect</li>
+          <li>Exchange messages between both tabs</li>
+          <li>Verify that messages are transmitted in real-time</li>
+        </ol>
+      </div>
+    </div>
+
+    <script>
+      class ChatTest {
+        constructor() {
+          this.ws = null;
+          this.currentChatId = null;
+          this.currentProfileId = null;
+          this.chats = [];
+          this.profiles = [];
+          this.pollingInterval = null;
+
+          this.initializeElements();
+          this.bindEvents();
+          this.loadData();
+        }
+
+        initializeElements() {
+          this.chatSelect = document.getElementById("chatSelect");
+          this.profileSelect = document.getElementById("profileSelect");
+          this.connectBtn = document.getElementById("connectBtn");
+          this.messages = document.getElementById("messages");
+          this.messageInput = document.getElementById("messageInput");
+          this.sendBtn = document.getElementById("sendBtn");
+          this.messageForm = document.getElementById("messageForm");
+          this.connectionStatus = document.getElementById("connectionStatus");
+          this.currentInfo = document.getElementById("currentInfo");
+          this.chatArea = document.getElementById("chatArea");
+          this.imageInput = document.getElementById("imageInput");
+          this.imageBtn = document.getElementById("imageBtn");
+          this.imagePreview = document.getElementById("imagePreview");
+          this.imagePreviewContainer = document.getElementById(
+            "imagePreviewContainer",
+          );
+          this.selectedImages = [];
+        }
+
+        bindEvents() {
+          this.connectBtn.addEventListener("click", () => this.connect());
+          this.messageForm.addEventListener("submit", (e) => {
+            e.preventDefault();
+            this.sendMessage();
+          });
+
+          this.imageBtn.addEventListener("click", () => {
+            this.imageInput.click();
+          });
+
+          this.imageInput.addEventListener("change", (e) => {
+            this.handleImageSelection(e.target.files);
+          });
+        }
+
+        async loadData() {
+          try {
+            // Load chat rooms
+            const chatsResponse = await fetch("/chats/");
+            if (chatsResponse.ok) {
+              this.chats = await chatsResponse.json();
+              this.populateChatSelect();
+            }
+
+            // Load profiles
+            const profilesResponse = await fetch("/profiles/");
+            if (profilesResponse.ok) {
+              this.profiles = await profilesResponse.json();
+              this.populateProfileSelect();
+            }
+          } catch (error) {
+            console.error("Failed to load data:", error);
+          }
+        }
+
+        populateChatSelect() {
+          this.chats.forEach((chat) => {
+            const option = document.createElement("option");
+            option.value = chat.id;
+            option.textContent =
+              chat.name || `Chat Room ${chat.id.substring(0, 8)}`;
+            this.chatSelect.appendChild(option);
+          });
+        }
+
+        populateProfileSelect() {
+          this.profiles.forEach((profile) => {
+            const option = document.createElement("option");
+            option.value = profile.id;
+            option.textContent =
+              profile.name || `User ${profile.id.substring(0, 8)}`;
+            this.profileSelect.appendChild(option);
+          });
+        }
+
+        async connect() {
+          this.currentChatId = this.chatSelect.value;
+          this.currentProfileId = this.profileSelect.value;
+
+          if (!this.currentChatId || !this.currentProfileId) {
+            alert("Please select both chat room and user.");
+            return;
+          }
+
+          try {
+            // WebSocket connection
+            const wsUrl = `ws://${window.location.host}/ws/${this.currentChatId}`;
+            this.ws = new WebSocket(wsUrl);
+
+            this.ws.onopen = () => {
+              this.updateConnectionStatus(true);
+              this.enableControls(true);
+              this.loadPreviousMessages();
+              this.addSystemMessage("Connected to chat room.");
+            };
+
+            this.ws.onmessage = (event) => {
+              const message = JSON.parse(event.data);
+              this.displayMessage(message);
+            };
+
+            this.ws.onclose = () => {
+              this.updateConnectionStatus(false);
+              this.enableControls(false);
+              this.addSystemMessage("Chat room connection closed.");
+            };
+
+            this.ws.onerror = (error) => {
+              console.error("WebSocket error:", error);
+            };
+          } catch (error) {
+            console.error("Connection failed:", error);
+          }
+        }
+
+        disconnect() {
+          if (this.ws) {
+            this.ws.close();
+            this.ws = null;
+          }
+          this.updateConnectionStatus(false);
+          this.enableControls(false);
+        }
+
+        async loadPreviousMessages() {
+          try {
+            const response = await fetch(
+              `/chats/${this.currentChatId}/messages/`,
+            );
+            if (response.ok) {
+              const messages = await response.json();
+              this.messages.innerHTML = "";
+              messages.forEach((message) => this.displayMessage(message));
+            }
+          } catch (error) {
+            console.error("Failed to load previous messages:", error);
+          }
+        }
+
+        async sendMessage() {
+          const text = this.messageInput.value.trim();
+
+          // Allow sending images without text
+          if (!text && this.selectedImages.length === 0) {
+            return;
+          }
+
+          if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+            return;
+          }
+
+          // Upload images first if any
+          const mediaFileIds = await this.uploadImages();
+
+          const message = {
+            profile_id: this.currentProfileId,
+            text: text || (this.selectedImages.length > 0 ? "[Image]" : ""),
+            media_file_ids: mediaFileIds,
+          };
+
+          this.ws.send(JSON.stringify(message));
+          this.messageInput.value = "";
+
+          // Clear selected images
+          this.selectedImages = [];
+          this.updateImagePreview();
+        }
+
+        async displayMessage(message) {
+          const messageDiv = document.createElement("div");
+          const isOwn = message.profile_id === this.currentProfileId;
+
+          messageDiv.className = `message p-3 rounded-lg mb-2 max-w-xs ${isOwn ? "message-own" : "message-other"}`;
+
+          // Debug logging
+          console.log("Displaying message:", {
+            messageId: message.id,
+            profileId: message.profile_id,
+            currentProfileId: this.currentProfileId,
+            availableProfiles: this.profiles.map((p) => ({
+              id: p.id,
+              name: p.name,
+            })),
+            isOwn,
+            mediaFileIds: message.media_file_ids,
+          });
+
+          const profile = this.profiles.find(
+            (p) => p.id === message.profile_id,
+          );
+          const profileName = profile ? profile.name : "Unknown User";
+
+          const time = new Date().toLocaleTimeString("ko-KR", {
+            hour: "2-digit",
+            minute: "2-digit",
+          });
+
+          let contentHtml = `<div class="text-sm">${this.escapeHtml(message.text)}</div>`;
+
+          // Display images if any
+          if (message.media_file_ids && message.media_file_ids.length > 0) {
+            const imagesHtml = await this.loadMessageImages(
+              message.media_file_ids,
+            );
+            if (imagesHtml) {
+              contentHtml += imagesHtml;
+            }
+          }
+
+          messageDiv.innerHTML = `
+                    <div class="text-xs opacity-70 mb-1">${profileName} • ${time}</div>
+                    ${contentHtml}
+                `;
+
+          this.messages.appendChild(messageDiv);
+          this.messages.scrollTop = this.messages.scrollHeight;
+        }
+
+        async loadMessageImages(mediaFileIds) {
+          if (!mediaFileIds || mediaFileIds.length === 0) {
+            return "";
+          }
+
+          try {
+            // Load media information for each file ID
+            const imagePromises = mediaFileIds.map(async (mediaId) => {
+              const response = await fetch(`/media/${mediaId}`);
+              if (response.ok) {
+                return await response.json();
+              }
+              return null;
+            });
+
+            const mediaItems = await Promise.all(imagePromises);
+            const validMediaItems = mediaItems.filter(
+              (item) => item && item.thumbnail_url,
+            );
+
+            if (validMediaItems.length === 0) {
+              return "";
+            }
+
+            // Create image gallery HTML
+            const imagesHtml = validMediaItems
+              .map((media) => {
+                return `<img src="${media.thumbnail_url}" alt="${media.filename}" class="rounded cursor-pointer hover:opacity-80 transition-opacity" onclick="window.open('${media.original_url}', '_blank')" />`;
+              })
+              .join("");
+
+            return `<div class="flex gap-1 flex-wrap mt-2">${imagesHtml}</div>`;
+          } catch (error) {
+            console.error("Error loading message images:", error);
+            return "";
+          }
+        }
+
+        addSystemMessage(text) {
+          const messageDiv = document.createElement("div");
+          messageDiv.className =
+            "text-center text-gray-500 text-sm italic my-2";
+          messageDiv.textContent = text;
+          this.messages.appendChild(messageDiv);
+          this.messages.scrollTop = this.messages.scrollHeight;
+        }
+
+        updateConnectionStatus(connected) {
+          if (connected) {
+            this.connectionStatus.innerHTML = "🟢 Connected";
+            this.chatArea.classList.remove("hidden");
+
+            const chat = this.chats.find((c) => c.id === this.currentChatId);
+            const profile = this.profiles.find(
+              (p) => p.id === this.currentProfileId,
+            );
+
+            this.currentInfo.textContent = `Chat Room: ${chat ? chat.name || `Chat Room ${chat.id.substring(0, 8)}` : "Unknown"} | User: ${profile ? profile.name : "Unknown"}`;
+            this.connectBtn.textContent = "Disconnect";
+            this.connectBtn.onclick = () => this.disconnect();
+          } else {
+            this.connectionStatus.innerHTML = "🔴 Not Connected";
+            this.currentInfo.textContent =
+              "Chat Room: Not Selected | User: Not Selected";
+            this.chatArea.classList.add("hidden");
+            this.connectBtn.textContent = "Connect";
+            this.connectBtn.onclick = () => this.connect();
+          }
+        }
+
+        enableControls(enabled) {
+          this.messageInput.disabled = !enabled;
+          this.sendBtn.disabled = !enabled;
+          this.chatSelect.disabled = enabled;
+          this.profileSelect.disabled = enabled;
+          this.imageInput.disabled = !enabled;
+          this.imageBtn.disabled = !enabled;
+        }
+
+        handleImageSelection(files) {
+          this.selectedImages = Array.from(files);
+          this.updateImagePreview();
+        }
+
+        updateImagePreview() {
+          if (this.selectedImages.length === 0) {
+            this.imagePreview.classList.add("hidden");
+            this.imagePreviewContainer.innerHTML = "";
+            return;
+          }
+
+          this.imagePreview.classList.remove("hidden");
+          this.imagePreviewContainer.innerHTML = "";
+
+          this.selectedImages.forEach((file, index) => {
+            const previewDiv = document.createElement("div");
+            previewDiv.className = "relative inline-block";
+
+            const img = document.createElement("img");
+            img.src = URL.createObjectURL(file);
+            img.className = "w-16 h-16 object-cover rounded border";
+            img.alt = file.name;
+
+            const removeBtn = document.createElement("button");
+            removeBtn.innerHTML = "×";
+            removeBtn.className =
+              "absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 text-xs hover:bg-red-600";
+            removeBtn.onclick = () => this.removeImage(index);
+
+            previewDiv.appendChild(img);
+            previewDiv.appendChild(removeBtn);
+            this.imagePreviewContainer.appendChild(previewDiv);
+          });
+        }
+
+        removeImage(index) {
+          this.selectedImages.splice(index, 1);
+          this.updateImagePreview();
+        }
+
+        async uploadImages() {
+          if (this.selectedImages.length === 0) {
+            return [];
+          }
+
+          const formData = new FormData();
+          this.selectedImages.forEach((file) => {
+            formData.append("files", file);
+          });
+          formData.append("object_type", "message");
+          formData.append("object_id", this.currentChatId);
+
+          try {
+            const response = await fetch("/upload/images/", {
+              method: "POST",
+              body: formData,
+            });
+
+            if (response.ok) {
+              const uploadedMedia = await response.json();
+              return uploadedMedia.map((media) => media.id);
+            } else {
+              console.error("Image upload failed:", response.statusText);
+              return [];
+            }
+          } catch (error) {
+            console.error("Error uploading images:", error);
+            return [];
+          }
+        }
+
+        escapeHtml(text) {
+          const div = document.createElement("div");
+          div.textContent = text;
+          return div.innerHTML;
+        }
+      }
+
+      // 페이지 로드 시 채팅 테스트 초기화
+      document.addEventListener("DOMContentLoaded", () => {
+        new ChatTest();
+      });
+    </script>
+  </body>
+</html>

@@ -22,6 +22,7 @@ from app.main import app
 from app.models.post import Post
 from app.models.profile import Profile
 from app.models.user import User
+from app.models.chat import Chat, Message
 
 # --- 상수 정의 ---
 ROOT_DIR = Path(__file__).parent.parent.resolve()
@@ -120,12 +121,34 @@ def seed_posts_via_api(
         if existing_post:
             continue
 
-        # API 호출
-        # 현재 게시물당 이미지를 연결하는 규칙이 없으므로 빈 파일로 호출
+        # text.md 파일 읽기
+        text_file = post_dir / "text.md"
+        post_text = ""
+        if text_file.exists():
+            with open(text_file, "r", encoding="utf-8") as f:
+                post_text = f.read().strip()
+
+        # 이미지 파일 찾기 및 숫자 기반 정렬
+        image_files = (
+            list(post_dir.glob("*.png"))
+            + list(post_dir.glob("*.jpg"))
+            + list(post_dir.glob("*.jpeg"))
+        )
+        image_files.sort(key=lambda f: int(f.stem))
+
+        # 이미지 파일이 없으면 강제로 중단
+        assert image_files, f"No image files found in {post_dir}"
+
+        # API 호출 - 이미지 파일 포함
+        files = []
+        for img_file in image_files:
+            with open(img_file, "rb") as f:
+                files.append(("files", (img_file.name, f.read(), "image/png")))
+
         response = client.post(
             "/posts/",
             data={"text": post_text, "profile_id": str(profile.id)},
-            files={"files": []},
+            files=files,
         )
         if response.status_code == 200:
             print(f"[seed][api] post created for {character_name}: '{post_text}'")
@@ -134,6 +157,129 @@ def seed_posts_via_api(
                 f"[seed][api] failed to create post for {character_name}. "
                 f"Status: {response.status_code}, Detail: {response.text}"
             )
+
+
+def seed_chat_data(client: TestClient, session: Session):
+    """API를 사용하여 테스트 채팅 데이터를 생성합니다."""
+    # 캐릭터 프로필 가져오기
+    dogwithjob_profile = session.exec(
+        select(Profile).where(Profile.name == "dogwithjob")
+    ).first()
+    catwithwifi_profile = session.exec(
+        select(Profile).where(Profile.name == "catwithwifi")
+    ).first()
+
+    if not dogwithjob_profile or not catwithwifi_profile:
+        print("[seed] required profiles not found for chat seeding. Skipping.")
+        return
+
+    # 이미 채팅방이 있는지 확인
+    existing_chat = session.exec(
+        select(Chat).where(Chat.name == "AI 캐릭터 대화방")
+    ).first()
+    if existing_chat:
+        print("[seed] chat room already exists. Skipping chat seeding.")
+        return
+
+    # 채팅방 생성
+    chat_data = {
+        "name": "AI 캐릭터 대화방",
+        "profile_ids": [str(dogwithjob_profile.id), str(catwithwifi_profile.id)],
+    }
+
+    response = client.post("/chats/", json=chat_data)
+    if response.status_code != 200:
+        print(f"[seed][api] failed to create chat room. Status: {response.status_code}")
+        return
+
+    chat = response.json()
+    chat_id = chat["id"]
+    print(f"[seed][api] chat room created: {chat['name']} ({chat_id})")
+
+    # 샘플 메시지 데이터
+    sample_messages = [
+        {
+            "profile_id": str(dogwithjob_profile.id),
+            "text": "안녕하세요! 오늘 날씨가 정말 좋네요. 산책하기 딱 좋은 날씨 같아요.",
+        },
+        {
+            "profile_id": str(catwithwifi_profile.id),
+            "text": "맞아요! 저도 창밖을 보고 있었는데, 햇살이 따뜻해서 졸음이 올 뻔했어요. 😺",
+        },
+        {
+            "profile_id": str(dogwithjob_profile.id),
+            "text": "헤헤, 고양이는 햇살 아래에서 자는 게 최고죠! 저는 산책 가면서 동네 친구들도 만나고 싶어요.",
+        },
+        {
+            "profile_id": str(catwithwifi_profile.id),
+            "text": "산책 좋아하시는군요! 저는 주로 집에서 인터넷 서핑하면서 시간을 보내는 편이에요. 요즘은 특히 유튜브에 푹 빠져있어요.",
+        },
+        {
+            "profile_id": str(dogwithjob_profile.id),
+            "text": "와, 유튜브! 저도 가끔 보긴 하는데 뭐 주로 보세요? 저는 동물 영상이나 운동 관련 영상을 좋아해요.",
+        },
+        {
+            "profile_id": str(catwithwifi_profile.id),
+            "text": "저는 요리 영상과 게임 방송을 즐겨봐요! 특히 맛있는 음식 만드는 거 보면 다음 날 바로 따라 해보고 싶어져요.",
+        },
+        {
+            "profile_id": str(dogwithjob_profile.id),
+            "text": "오, 요리라니! 저는 요리를 잘 못해서 부럽네요. 대신 먹는 건 정말 잘해요! 🍖",
+        },
+        {
+            "profile_id": str(catwithwifi_profile.id),
+            "text": "크크크, 먹는 것도 중요한 재능이에요! 다음에 제가 만든 요리 대접해드릴게요. 간단한 파스타라도 괜찮으세요?",
+        },
+        {
+            "profile_id": str(dogwithjob_profile.id),
+            "text": "정말요? 파스타 좋아해요! 언제든지 환영입니다. 제가 맛있는 디저트라도 사 갈게요!",
+        },
+        {
+            "profile_id": str(catwithwifi_profile.id),
+            "text": "약속이에요! 그럼 이번 주말에 어때요? 저는 토요일 오후가 편해요.",
+        },
+        {
+            "profile_id": str(dogwithjob_profile.id),
+            "text": "좋아요! 토요일 오후에 만나서 맛있는 음식 먹으면서 이야기 나눠요. 정말 기대되네요!",
+        },
+        {
+            "profile_id": str(catwithwifi_profile.id),
+            "text": "네네! 그럼 토요일에 봐요! 🐾",
+        },
+    ]
+
+    # 메시지 생성
+    for i, message_data in enumerate(sample_messages):
+        message_data["chat_id"] = chat_id
+
+        # 이미 메시지가 있는지 확인
+        existing_message = session.exec(
+            select(Message)
+            .where(Message.chat_id == uuid.UUID(chat_id))
+            .where(Message.text == message_data["text"])
+        ).first()
+        if existing_message:
+            continue
+
+        response = client.post("/messages/", json=message_data)
+        if response.status_code == 200:
+            message = response.json()
+            profile_name = (
+                "dogwithjob"
+                if message_data["profile_id"] == dogwithjob_profile.id
+                else "catwithwifi"
+            )
+            print(
+                f"[seed][api] message {i + 1} created from {profile_name}: '{message_data['text'][:30]}...'"
+            )
+        else:
+            print(
+                f"[seed][api] failed to create message {i + 1}. Status: {response.status_code}"
+            )
+
+    print(
+        f"[seed] chat seeding completed. Created {len(sample_messages)} sample messages."
+    )
 
 
 def seed_ai_characters():
@@ -158,6 +304,9 @@ def seed_ai_characters():
 
             # 3. 게시물 생성 (API 사용)
             seed_posts_via_api(client, name, profile, session)
+
+        # 4. 채팅 데이터 생성 (API 사용)
+        seed_chat_data(client, session)
 
 
 def main():

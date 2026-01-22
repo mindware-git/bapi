@@ -51,3 +51,6 @@ class MessageCreate(MessageBase):
 
 class MessagePublic(MessageBase):
     id: uuid.UUID
+    chat_id: uuid.UUID
+    profile_id: uuid.UUID
+    media_file_ids: list[uuid.UUID] = Field(default_factory=list)
