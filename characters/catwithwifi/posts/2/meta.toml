@@ -1,0 +1,24 @@
+post_id = "2"
+character_id = "catwithwifi"
+
+[type]
+format = "post"
+platform = "instagram"
+
+[mood]
+primary = "observant"
+secondary = "neutral"
+
+[context]
+indoors = true
+outdoors = false
+time_of_day = "evening"
+activity_level = "still"
+
+[content_rules]
+minimum_images = 1
+text_optional = true
+
+[notes]
+purpose = "wifi_observation"
+description = "Observing the router. Just watching the lights. No explanation needed."

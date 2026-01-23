@@ -1,0 +1,24 @@
+post_id = "3"
+character_id = "catwithwifi"
+
+[type]
+format = "post"
+platform = "instagram"
+
+[mood]
+primary = "routine"
+secondary = "functional"
+
+[context]
+indoors = true
+outdoors = false
+time_of_day = "morning"
+activity_level = "low"
+
+[content_rules]
+minimum_images = 3
+text_optional = true
+
+[notes]
+purpose = "daily_internet_routine"
+description = "Morning routine: wake up, check devices, go online. Normal activities."

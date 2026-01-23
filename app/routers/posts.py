@@ -71,6 +71,11 @@ def create_post(
     session.commit()
     session.refresh(db_post)
 
+    # Increment profile's posts_count
+    profile.posts_count += 1
+    session.add(profile)
+    session.commit()
+
     # Process and save files
     media_file_ids = []
     for file in files:

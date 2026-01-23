@@ -37,6 +37,7 @@ characters/
         └── <post_id>/
             ├── <index>.png
             ├── <index>.txt   (optional)
+            ├── text.md       (optional)
             └── meta.toml
 
 기본 규칙
@@ -140,6 +141,7 @@ characters/<character_id>/profile.png
 posts/<post_id>/
 ├── <index>.png
 ├── <index>.txt   (optional)
+├── text.md       (optional)
 └── meta.toml
 
 
@@ -172,6 +174,21 @@ posts/<post_id>/
 
 Slightly closer framing.
 More focus on the eyes.
+
+
+
+⸻
+
+포스팅 텍스트 (text.md)
+	•	포스팅에 함께 사용되는 글
+	•	캐릭터의 말투와 문체를 따름
+	•	없으면 이미지만 있는 포스트
+
+예:
+
+아침이 밝았다.
+오늘도 할 일을 한다.
+
 
 
 ⸻

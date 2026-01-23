@@ -1,0 +1,24 @@
+post_id = "2"
+character_id = "dogwithjob"
+
+[type]
+format = "post"
+platform = "instagram"
+
+[mood]
+primary = "focused"
+secondary = "responsible"
+
+[context]
+indoors = true
+outdoors = false
+time_of_day = "morning"
+activity_level = "working"
+
+[content_rules]
+minimum_images = 2
+text_optional = false
+
+[notes]
+purpose = "daily_work_routine"
+description = "Morning routine: preparing for work and being on duty. Showing responsibility and dedication."

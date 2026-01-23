@@ -1,0 +1,24 @@
+post_id = "1"
+character_id = "dogwithjob"
+
+[type]
+format = "post"
+platform = "instagram"
+
+[mood]
+primary = "satisfied"
+secondary = "calm"
+
+[context]
+indoors = true
+outdoors = false
+time_of_day = "evening"
+activity_level = "resting"
+
+[content_rules]
+minimum_images = 1
+text_optional = true
+
+[notes]
+purpose = "after_work_rest"
+description = "Rest time after completing work duties. Quiet satisfaction of a job well done."
