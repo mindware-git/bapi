@@ -23,11 +23,11 @@ The backend is a [FastAPI](https://fastapi.tiangolo.com/) application.
 
 ### Deploy
 ```
-sudo nano /etc/nginx/sites-available/bapi
+sudo nano /etc/nginx/sites-available/blow
 
 server {
     listen 80;
-    server_name bapi.mindware.kr;
+    server_name blow.mindware.kr;
 
     location / {
         proxy_pass http://127.0.0.1:8000;
@@ -37,7 +37,7 @@ server {
     }
 }
 
-sudo ln -s /etc/nginx/sites-available/bapi /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/blow /etc/nginx/sites-enabled/
 sudo nginx -t
 sudo systemctl reload nginx
 ```
