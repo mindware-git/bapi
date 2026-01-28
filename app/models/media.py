@@ -15,6 +15,8 @@ class MediaBase(SQLModel):
     content_type: str | None = None  # MIME 타입
     object_type: str  # "post", "comment", "message"
     object_id: uuid.UUID
+    duration: int | None = None  # 비디오 길이 (초)
+    video_codec: str | None = None  # 비디오 코덱
 
 
 class Media(MediaBase, table=True):

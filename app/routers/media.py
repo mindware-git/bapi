@@ -11,6 +11,7 @@ from ..models.media import (
 )
 from ..database import get_session
 from ..utils.media_utils import create_thumbnail, get_image_dimensions
+from ..utils.video_utils import create_video_thumbnail, get_video_metadata
 
 router = APIRouter()
 
@@ -125,3 +126,82 @@ def list_media(
 
     media_list = session.exec(query.offset(offset).limit(limit)).all()
     return media_list
+
+
+@router.post("/upload/videos/", response_model=List[MediaPublic])
+def upload_videos(
+    *,
+    session: Session = Depends(get_session),
+    files: List[UploadFile] = File(...),
+    object_type: str = Form(...),
+    object_id: str = Form(...),
+):
+    """
+    범용 비디오 업로드 API
+    - object_type: "post", "comment", "message" 등
+    - object_id: 해당 객체의 UUID
+    """
+    # Validate object_id format
+    try:
+        object_uuid = UUID(object_id)
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid object_id format")
+
+    # Create uploads directory if it doesn't exist
+    uploads_dir = "uploads"
+    os.makedirs(f"{uploads_dir}/videos/originals", exist_ok=True)
+    os.makedirs(f"{uploads_dir}/videos/thumbnails", exist_ok=True)
+
+    uploaded_media = []
+
+    for file in files:
+        # Validate file type
+        if not file.content_type or not file.content_type.startswith("video/"):
+            continue  # Skip non-video files
+
+        # Generate unique filename
+        file_extension = os.path.splitext(file.filename)[1]
+        unique_filename = f"{uuid4()}{file_extension}"
+
+        # Save original file
+        original_path = f"{uploads_dir}/videos/originals/{unique_filename}"
+        with open(original_path, "wb") as buffer:
+            content = file.file.read()
+            buffer.write(content)
+
+        # Get file size
+        file_size = os.path.getsize(original_path)
+
+        # Get video metadata (duration, width, height, codec)
+        duration, width, height, codec = get_video_metadata(original_path)
+
+        # Create thumbnail from video
+        thumbnail_filename = f"{uuid4()}.jpg"
+        thumbnail_path = f"{uploads_dir}/videos/thumbnails/{thumbnail_filename}"
+        create_video_thumbnail(original_path, thumbnail_path)
+        thumbnail_url = f"/uploads/videos/thumbnails/{thumbnail_filename}"
+
+        # Create media record
+        media_create = MediaCreate(
+            original_url=f"/uploads/videos/originals/{unique_filename}",
+            thumbnail_url=thumbnail_url,
+            media_type="video",
+            file_size=file_size,
+            width=width,
+            height=height,
+            filename=file.filename or unique_filename,
+            content_type=file.content_type,
+            object_type=object_type,
+            object_id=object_uuid,
+            duration=duration,
+            video_codec=codec,
+        )
+
+        db_media = Media.model_validate(media_create)
+        session.add(db_media)
+        session.commit()
+        session.refresh(db_media)
+
+        uploaded_media.append(db_media)
+
+    return uploaded_media
